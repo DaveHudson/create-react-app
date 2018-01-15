@@ -21,7 +21,8 @@ const chalk = require('chalk');
 const paths = require('../config/paths');
 const createJestConfig = require('./utils/createJestConfig');
 const inquirer = require('react-dev-utils/inquirer');
-const spawnSync = require('react-dev-utils/crossSpawn').sync;
+// TODO: try same 4.x like CRA CLI does?
+const spawn = require('react-dev-utils/crossSpawn');
 const os = require('os');
 
 const green = chalk.green;
@@ -236,21 +237,30 @@ inquirer
       }
     }
 
+    let child;
     if (fs.existsSync(paths.yarnLockFile)) {
       console.log(cyan('Running yarn...'));
-      spawnSync('yarnpkg', ['--cwd', process.cwd()], { stdio: 'inherit' });
+      child = spawn('yarnpkg', ['--cwd', process.cwd()], { stdio: 'inherit' });
     } else {
       console.log(cyan('Running npm install...'));
-      spawnSync('npm', ['install', '--loglevel', 'error'], {
+      child = spawn('npm', ['install', '--loglevel', 'error'], {
         stdio: 'inherit',
       });
     }
-    console.log(green('Ejected successfully!'));
-    console.log();
-
-    console.log(
-      green('Please consider sharing why you ejected in this survey:')
-    );
-    console.log(green('  http://goo.gl/forms/Bi6CZjk1EqsdelXk1'));
-    console.log();
+    child.on('close', code => {
+      if (code !== 0) {
+        console.log(
+          'Could not finish ejecting. Clear node_modules and re-run your package manager.'
+        );
+        process.exit(code);
+        return;
+      }
+      console.log(green('Ejected successfully!'));
+      console.log();
+      console.log(
+        green('Please consider sharing why you ejected in this survey:')
+      );
+      console.log(green('  http://goo.gl/forms/Bi6CZjk1EqsdelXk1'));
+      console.log();
+    });
   });
